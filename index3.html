@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Role Model Lesson</title>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .text-box {
+    font-size: 22px;
+    margin: 20px;
+  }
+
+  #arabic {
+    direction: rtl;
+    text-align: right;
+  }
+
+  button {
+    font-size: 18px;
+    margin: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+  }
+
+  details {
+    margin: 15px;
+    font-size: 20px;
+  }
+
+  summary {
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .controls {
+    margin-top: 15px;
+  }
+</style>
+</head>
+
+<body>
+
+<h2>Role Model Lesson</h2>
+
+<!-- Arabic visible -->
+<div class="text-box" id="arabic"></div>
+
+<!-- English hidden -->
+<details>
+  <summary>Show English</summary>
+  <div class="text-box" id="english"></div>
+</details>
+
+<!-- TTS option -->
+<div class="controls">
+  <label>
+    <input type="checkbox" id="autoSpeak">
+    Auto-play when moving (Arabic → English)
+  </label>
+</div>
+
+<!-- Buttons -->
+<div class="controls">
+  <button onclick="speak(current.ar)">🔊 Arabic</button>
+  <button onclick="speak(current.en)">🔊 English</button>
+</div>
+
+<div class="controls">
+  <button onclick="prev()">⏮ Previous</button>
+  <button onclick="next()">⏭ Next</button>
+</div>
+
+<script>
+let data = [];
+let index = 0;
+let current = {};
+let voices = [];
+
+// Load voices
+speechSynthesis.onvoiceschanged = () => {
+  voices = speechSynthesis.getVoices();
+};
+
+// Load JSON
+fetch("data.json")
+  .then(res => res.json())
+  .then(json => {
+    data = json;
+    show();
+  });
+
+// Display text
+function show() {
+  current = data[index];
+
+  document.getElementById("english").textContent = current.en;
+  document.getElementById("arabic").textContent = current.ar;
+
+  document.querySelector("details").open = false;
+
+  // Auto TTS if checkbox checked
+  if (document.getElementById("autoSpeak").checked) {
+    speakSequence();
+  }
+}
+
+// Speak sequence: Arabic then English
+function speakSequence() {
+  speechSynthesis.cancel();
+
+  const arabicMsg = new SpeechSynthesisUtterance(current.ar);
+  const englishMsg = new SpeechSynthesisUtterance(current.en);
+
+  const arabicVoice = voices.find(v => v.lang.startsWith("ar"));
+  const englishVoice = voices.find(v => v.lang.startsWith("en"));
+
+  if (arabicVoice) {
+    arabicMsg.voice = arabicVoice;
+    arabicMsg.lang = "ar-SA";
+  }
+
+  if (englishVoice) {
+    englishMsg.voice = englishVoice;
+    englishMsg.lang = "en-US";
+  }
+
+  // Chain speech
+  arabicMsg.onend = () => speechSynthesis.speak(englishMsg);
+
+  speechSynthesis.speak(arabicMsg);
+}
+
+// Speak single
+function speak(text) {
+  const msg = new SpeechSynthesisUtterance(text);
+
+  if (/[\u0600-\u06FF]/.test(text)) {
+    msg.lang = "ar-SA";
+    const arabicVoice = voices.find(v => v.lang.startsWith("ar"));
+    if (arabicVoice) msg.voice = arabicVoice;
+  } else {
+    msg.lang = "en-US";
+    const englishVoice = voices.find(v => v.lang.startsWith("en"));
+    if (englishVoice) msg.voice = englishVoice;
+  }
+
+  speechSynthesis.cancel();
+  speechSynthesis.speak(msg);
+}
+
+// Navigation
+function next() {
+  if (index < data.length - 1) {
+    index++;
+    show();
+  }
+}
+
+function prev() {
+  if (index > 0) {
+    index--;
+    show();
+  }
+}
+</script>
+
+</body>
+</html>

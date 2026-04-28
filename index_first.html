@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Role Model Lesson</title>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .text-box {
+    font-size: 22px;
+    margin: 20px;
+  }
+
+  button {
+    font-size: 18px;
+    margin: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+  }
+  #arabic {
+  direction: rtl;
+  text-align: right;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Role Model Lesson</h2>
+
+<div class="text-box" id="english"></div>
+
+<div class="text-box" id="arabic" dir="rtl"></div>
+
+<button onclick="speak(current.en)">🔊 English</button>
+<button onclick="speak(current.ar)">🔊 Arabic</button>
+<br>
+<button onclick="prev()">⏮ Previous</button>
+<button onclick="next()">⏭ Next</button>
+
+<script>
+let data = [];
+let index = 0;
+let current = {};
+let voices = [];
+
+// Load voices properly
+speechSynthesis.onvoiceschanged = () => {
+  voices = speechSynthesis.getVoices();
+};
+
+// Load JSON file
+fetch("data.json")
+  .then(res => res.json())
+  .then(json => {
+    data = json;
+    show();
+  });
+
+// Show current sentence
+function show() {
+  current = data[index];
+  document.getElementById("english").textContent = current.en;
+  document.getElementById("arabic").textContent = current.ar;
+}
+
+// Speak function (fixed for Arabic + English)
+function speak(text) {
+  const msg = new SpeechSynthesisUtterance(text);
+
+  // Detect Arabic
+  if (/[\u0600-\u06FF]/.test(text)) {
+    msg.lang = "ar-SA";
+    const arabicVoice = voices.find(v => v.lang.startsWith("ar"));
+    if (arabicVoice) msg.voice = arabicVoice;
+  } else {
+    msg.lang = "en-US";
+    const englishVoice = voices.find(v => v.lang.startsWith("en"));
+    if (englishVoice) msg.voice = englishVoice;
+  }
+
+  speechSynthesis.cancel(); // stop previous speech
+  speechSynthesis.speak(msg);
+}
+
+// Navigation
+function next() {
+  if (index < data.length - 1) {
+    index++;
+    show();
+  }
+}
+
+function prev() {
+  if (index > 0) {
+    index--;
+    show();
+  }
+}
+</script>
+
+</body>
+</html>
